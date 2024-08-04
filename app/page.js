@@ -2,8 +2,10 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { firestore } from "@/firebase";
-import { Box, Button, Modal, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, IconButton, Modal, Stack, TextField, Typography } from "@mui/material";
 import { collection, doc, getDocs, query, setDoc, deleteDoc, getDoc, } from "firebase/firestore";
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { RemoveCircleOutline } from "@mui/icons-material";
 
 export default function Home() {
   const [inventory, setInventory] = useState([])
@@ -20,15 +22,18 @@ export default function Home() {
     setInventory(inventoryList)
   }
 
+  const addNewItem = async (item) => {
+    const docRef = doc(collection(firestore, 'inventory'), item)
+    const docSnap = await getDoc(docRef)
+    await setDoc(docRef, { quantity: 1 })
+    await updateInventory()
+  }
+
   const addItem = async (item) => {
     const docRef = doc(collection(firestore, 'inventory'), item)
     const docSnap = await getDoc(docRef)
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data()
-      await setDoc(docRef, { quantity: quantity + 1 })
-    } else {
-      await setDoc(docRef, { quantity: 1 })
-    }
+    const { quantity } = docSnap.data()
+    await setDoc(docRef, { quantity: quantity + 1 })
     await updateInventory()
   }
   
@@ -68,7 +73,7 @@ export default function Home() {
           position='absolute'
           top='50%'
           left='50%'
-          width={400}
+          width={800}
           bgcolor='white'
           border='2px solid #000'
           boxShadow={24}
@@ -80,7 +85,7 @@ export default function Home() {
             transform:'translate(-50%,-50%)', 
           }}
         >
-          <Typography id="modal-modal-title" variant="h6" component="h2">
+        <Typography id="modal-modal-title" variant="h6" component="h2">
           Add Item
         </Typography>
         <Stack width="100%" direction={'row'} spacing={2}>
@@ -94,11 +99,11 @@ export default function Home() {
           />
           <Button
             variant="outlined"
-            onClick={() => {
-              addItem(itemName)
+            onClick={() => { 
+              addNewItem(itemName)
               setItemName('')
               handleClose()
-            }}
+             }}
           >
             Add
           </Button>
@@ -134,18 +139,18 @@ export default function Home() {
             paddingX={5}
           >
             <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
-              {name.charAt(0).toUpperCase() + name.slice(1)}
-            </Typography>
-            <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
-              Quantity: {quantity}
+              {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
             </Typography>
             <Stack direction='row' spacing={2}>
-            <Button variant="contained" onClick={() => addItem(name)}>
-              Add
-            </Button>
-            <Button variant="contained" onClick={() => removeItem(name)}>
-              Remove
-            </Button>
+              <IconButton color="primary" aria-label="Add" onClick={() => removeItem(name)}>
+                <RemoveCircleOutline />
+              </IconButton>
+              <Typography variant={'h5'} color={'#333'} textAlign={'center'}>
+                {quantity}
+              </Typography>
+              <IconButton color="primary" aria-label="Add" onClick={() => addItem(name)}>
+                <AddCircleOutlineIcon />
+              </IconButton>
             </Stack>
           </Box>
         ))}
