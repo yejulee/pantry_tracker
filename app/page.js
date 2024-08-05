@@ -3,38 +3,40 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { firestore } from "@/firebase";
 import { Box, Button, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, Stack, TextField, Typography } from "@mui/material";
-import { collection, doc, getDocs, query, setDoc, deleteDoc, getDoc, } from "firebase/firestore";
+import { collection, doc, getDocs, query, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { AddCircleOutline, RemoveCircleOutline, Search } from "@mui/icons-material";
 
 export default function Home() {
-  const [inventory, setInventory] = useState([])
-  const [open, setOpen] = useState(false)
-  const [itemName, setItemName] = useState('')
-  const [type, setType] = useState('')
+  const [inventory, setInventory] = useState([]);
+  const [filteredInventory, setFilteredInventory] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [itemName, setItemName] = useState('');
+  const [type, setType] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const updateInventory = async () => {
-    const snapshot = query(collection(firestore, 'inventory'))
-    const docs = await getDocs(snapshot)
-    const inventoryList = []
+    const snapshot = query(collection(firestore, 'inventory'));
+    const docs = await getDocs(snapshot);
+    const inventoryList = [];
     docs.forEach((doc) => {
-      inventoryList.push({ name: doc.id, ...doc.data() })
-    })
-    setInventory(inventoryList)
-  }
+      inventoryList.push({ name: doc.id, ...doc.data() });
+    });
+    setInventory(inventoryList);
+    setFilteredInventory(inventoryList);
+  };
 
   const addNewItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item)
-    const docSnap = await getDoc(docRef)
+    const docRef = doc(collection(firestore, 'inventory'), item);
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      // If item already exists, just increment its quantity
       const { quantity } = docSnap.data();
       await setDoc(docRef, { quantity: quantity + 1 }, { merge: true });
     } else {
-      // If item does not exist, create a new item with type
-      await setDoc(docRef, { quantity: 1, type: type }); // Store type directly
+      await setDoc(docRef, { quantity: 1, type: type });
     }
     await updateInventory();
-  }
+  };
 
   const addItem = async (item) => {
     const docRef = doc(collection(firestore, 'inventory'), item);
@@ -47,7 +49,7 @@ export default function Home() {
     }
     await updateInventory();
   };
-  
+
   const removeItem = async (item) => {
     const docRef = doc(collection(firestore, 'inventory'), item);
     const docSnap = await getDoc(docRef);
@@ -68,11 +70,27 @@ export default function Home() {
     updateInventory();
   }, []);
 
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleSearchClick = () => {
+    if (searchTerm === '') {
+      setFilteredInventory(inventory);
+    } else {
+      const filtered = inventory.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredInventory(filtered);
+    }
+    searchHandleClose();
+  };
+
   const newHandleOpen = () => setOpen(true);
   const newHandleClose = () => setOpen(false);
-  
-  const searchHandleOpen = () => setOpen(true);
-  const searchHandleClose = () => setOpen(false);
+
+  const searchHandleOpen = () => setSearchOpen(true);
+  const searchHandleClose = () => setSearchOpen(false);
 
   return (
     <Box
@@ -94,13 +112,14 @@ export default function Home() {
           justifyContent: 'center'
         }}
       >
-        <Button variant="contained" onClick={newHandleOpen}>
+        <Button variant="contained" onClick={searchHandleOpen}>
           Search<Search/>
         </Button>
         <Button variant="contained" onClick={newHandleOpen}>
           Add New Item
         </Button>
       </Stack>
+
       <Modal open={open} onClose={newHandleClose}>
         <Box
           position='absolute'
@@ -138,7 +157,7 @@ export default function Home() {
                   id='simple-select'
                   value={type}
                   label='Type'
-                  onChange={ (e) => setType(e.target.value) }
+                  onChange={(e) => setType(e.target.value)}
                 >
                   <MenuItem value={'fruit'}>Fruit</MenuItem>
                   <MenuItem value={'vegetable'}>Vegetable</MenuItem>
@@ -150,7 +169,7 @@ export default function Home() {
               onClick={() => { 
                 addNewItem(itemName);
                 setItemName('');
-                setType(''); // Optionally clear type selection
+                setType('');
                 newHandleClose();
               }}
             >
@@ -159,51 +178,94 @@ export default function Home() {
           </Stack>
         </Box>
       </Modal>
-    <Box border={'1px solid #333'}>
-      <Box
-        width="800px"
-        height="50px"
-        bgcolor={'#ADD8E6'}
-        display={'flex'}
-        justifyContent={'flex-end'}
-        alignItems={'center'}
-        paddingRight='32px'
-      > 
-      </Box>
-      <Stack width="800px" height="300px" overflow={'auto'}>
-      {inventory.map(({ name, quantity, type }) => (
+
+      <Modal open={searchOpen} onClose={searchHandleClose}>
         <Box
-          key={name}
-          width="100%"
-          minHeight="50px"
-          display={'flex'}
-          border='1px dotted #000'
-          justifyContent={'space-between'}
-          alignItems={'center'}
-          bgcolor={'#f0f0f0'}
-          paddingX={5}
+          position='absolute'
+          top='50%'
+          left='50%'
+          width={800}
+          bgcolor='white'
+          border='2px solid #000'
+          boxShadow={24}
+          p={4}
+          display='flex'
+          flexDirection='column'
+          gap={3}
+          sx={{
+            transform: 'translate(-50%,-50%)',
+          }}
         >
-          <Typography variant={'h6'} color={'#333'} display={'flex'} textAlign={'center'}>
-            {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Search Inventory
           </Typography>
-          <Typography variant={'body1'} color={'#666'}>
-            {type ? `Type: ${type}` : 'Type: N/A'}
-          </Typography>
-          <Stack direction='row' spacing={2}>
-            <Typography variant={'h6'} color={'#333'} display={'flex'} alignItems={'center'}>
-              {quantity}
-            </Typography>
-            <IconButton color="primary" aria-label="Remove" onClick={() => removeItem(name)}>
-              <RemoveCircleOutline />
-            </IconButton>
-            <IconButton color="primary" aria-label="Add" onClick={() => addItem(name)}>
-              <AddCircleOutline />
-            </IconButton>
+          <Stack direction={'row'} spacing={2} alignItems={'center'}>
+          <TextField
+            id="search-bar"
+            label="Search Ingredients"
+            variant="outlined"
+            value={searchTerm}
+            onChange={handleSearch}
+            placeholder="Leave blank to show all"
+            sx={{
+              bgcolor: 'background.paper',
+              width: '80%',
+              borderRadius: 1,
+              input: { borderRadius: 1 },
+            }}
+          />
+            <Button variant="contained" onClick={handleSearchClick}>
+              Search
+            </Button>
           </Stack>
         </Box>
-      ))}
-      </Stack>
+      </Modal>
+
+      <Box border={'1px solid #333'}>
+        <Box
+          width="800px"
+          height="50px"
+          bgcolor={'#ADD8E6'}
+          display={'flex'}
+          justifyContent={'flex-end'}
+          alignItems={'center'}
+          paddingRight='32px'
+        > 
+        </Box>
+        <Stack width="800px" height="300px" overflow={'auto'}>
+          {filteredInventory.map(({ name, quantity, type }) => (
+            <Box
+              key={name}
+              width="100%"
+              minHeight="50px"
+              display={'flex'}
+              border='1px dotted #000'
+              justifyContent={'space-between'}
+              alignItems={'center'}
+              bgcolor={'#f0f0f0'}
+              paddingX={5}
+            >
+              <Typography variant={'h6'} color={'#333'} display={'flex'} textAlign={'center'}>
+                {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
+              </Typography>
+              <Typography variant={'body1'} color={'#666'}>
+                {type ? `Type: ${type}` : 'Type: N/A'}
+              </Typography>
+              <Stack direction='row' spacing={2}>
+                <Typography variant={'h6'} color={'#333'} display={'flex'} alignItems={'center'}>
+                  {quantity}
+                </Typography>
+                <IconButton color="primary" aria-label="Remove" onClick={() => removeItem(name)}>
+                  <RemoveCircleOutline />
+                </IconButton>
+                <IconButton color="primary" aria-label="Add" onClick={() => addItem(name)}>
+                  <AddCircleOutline />
+                </IconButton>
+              </Stack>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
     </Box>
-  </Box>
-)
+  );
 }
