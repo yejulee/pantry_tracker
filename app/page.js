@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { firestore } from "@/firebase";
-import { Box, Button, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, FormControl, Grid, IconButton, InputLabel, MenuItem, Modal, Select, Stack, TextField, Typography } from "@mui/material";
 import { collection, doc, getDocs, query, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { AddCircleOutline, RemoveCircleOutline, Search } from "@mui/icons-material";
 
@@ -27,7 +27,7 @@ export default function Home() {
   };
 
   const addNewItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item);
+    const docRef = doc(collection(firestore, 'inventory'), item.toUpperCase());
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const { quantity } = docSnap.data();
@@ -233,7 +233,7 @@ export default function Home() {
         > 
         </Box>
         <Stack width="800px" height="300px" overflow={'auto'}>
-          {filteredInventory.map(({ name, quantity, type }) => (
+          {inventory.map(({ name, quantity, type }) => (
             <Box
               key={name}
               width="100%"
@@ -245,23 +245,38 @@ export default function Home() {
               bgcolor={'#f0f0f0'}
               paddingX={5}
             >
-              <Typography variant={'h6'} color={'#333'} display={'flex'} textAlign={'center'}>
-                {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
-              </Typography>
-              <Typography variant={'body1'} color={'#666'}>
-                {type ? `Type: ${type}` : 'Type: N/A'}
-              </Typography>
-              <Stack direction='row' spacing={2}>
-                <Typography variant={'h6'} color={'#333'} display={'flex'} alignItems={'center'}>
-                  {quantity}
-                </Typography>
-                <IconButton color="primary" aria-label="Remove" onClick={() => removeItem(name)}>
-                  <RemoveCircleOutline />
-                </IconButton>
-                <IconButton color="primary" aria-label="Add" onClick={() => addItem(name)}>
-                  <AddCircleOutline />
-                </IconButton>
-              </Stack>
+              <Grid container alignItems="center">
+                <Grid item xs={4}>
+                  <Typography variant={'h6'} color={'#333'}>
+                    {name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant={'body1'} color={'#666'} textAlign="center">
+                    {type ? `Type: ${type}` : 'Type: N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4}>
+                  <Stack direction='row' spacing={2} alignItems='center' justifyContent="flex-end">
+                    <IconButton color="primary" aria-label="Remove" onClick={() => removeItem(name)}>
+                      <RemoveCircleOutline />
+                    </IconButton>
+                    <Box
+                      display="flex"
+                      justifyContent="center"
+                      alignItems="center"
+                      width={30} // Adjust the width as needed to accommodate larger quantities
+                    >
+                      <Typography variant={'h6'} color={'#333'} textAlign={'center'}>
+                        {quantity}
+                      </Typography>
+                    </Box>
+                    <IconButton color="primary" aria-label="Add" onClick={() => addItem(name)}>
+                      <AddCircleOutline />
+                    </IconButton>
+                  </Stack>
+                </Grid>
+              </Grid>
             </Box>
           ))}
         </Stack>
